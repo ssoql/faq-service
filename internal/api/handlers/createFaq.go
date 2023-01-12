@@ -3,7 +3,7 @@ package handlers
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/ssoql/faq-service/internal/useCases"
-	"github.com/ssoql/faq-service/utils/api_errors"
+	"github.com/ssoql/faq-service/utils/apiErrors"
 	"net/http"
 )
 
@@ -37,11 +37,11 @@ func (h *faqCreateHandler) Handle(c *gin.Context) {
 	c.JSON(http.StatusCreated, result)
 }
 
-func retrieveValidInput(c *gin.Context) (*FaqCreateInput, api_errors.ApiError) {
+func retrieveValidInput(c *gin.Context) (*FaqCreateInput, apiErrors.ApiError) {
 	var input FaqCreateInput
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		return nil, api_errors.NewBadRequestError("invalid json data")
+		return nil, apiErrors.NewBadRequestError("invalid json data")
 	}
 	// todo add validation of parameters
 

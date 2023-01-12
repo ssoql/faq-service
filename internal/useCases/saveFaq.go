@@ -5,22 +5,22 @@ import (
 	"github.com/ssoql/faq-service/internal/app/entities"
 
 	"github.com/ssoql/faq-service/internal/useCases/repositories"
-	"github.com/ssoql/faq-service/utils/api_errors"
+	"github.com/ssoql/faq-service/utils/apiErrors"
 )
 
 type SaveFaqUseCase interface {
-	Handle(ctx context.Context, question, answer string) (*entities.Faq, api_errors.ApiError)
+	Handle(ctx context.Context, question, answer string) (*entities.Faq, apiErrors.ApiError)
 }
 
 type saveFaqUseCase struct {
-	db repositories.DbWrite
+	db repositories.FaqWriteRepository
 }
 
-func NewCreateFaqUseCase(writeRepository repositories.DbWrite) *saveFaqUseCase {
+func NewCreateFaqUseCase(writeRepository repositories.FaqWriteRepository) *saveFaqUseCase {
 	return &saveFaqUseCase{db: writeRepository}
 }
 
-func (u *saveFaqUseCase) Handle(ctx context.Context, question, answer string) (*entities.Faq, api_errors.ApiError) {
+func (u *saveFaqUseCase) Handle(ctx context.Context, question, answer string) (*entities.Faq, apiErrors.ApiError) {
 	newFaq := &entities.Faq{
 		Question: question,
 		Answer:   answer,

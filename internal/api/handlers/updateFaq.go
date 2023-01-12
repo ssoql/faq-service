@@ -3,7 +3,7 @@ package handlers
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/ssoql/faq-service/internal/useCases"
-	"github.com/ssoql/faq-service/utils/api_errors"
+	"github.com/ssoql/faq-service/utils/apiErrors"
 	"net/http"
 )
 
@@ -27,20 +27,20 @@ func (h *faqUpdateHandler) Handle(c *gin.Context) {
 		return
 	}
 
-	//result, err := h.useCase.Handle(c, faqInput.Question, faqInput.Answer)
-	//if err != nil {
-	//	c.JSON(err.Status(), err)
-	//	return
-	//}
+	result, err := h.useCase.Handle(c, faqInput.ID, faqInput.Question, faqInput.Answer)
+	if err != nil {
+		c.JSON(err.Status(), err)
+		return
+	}
 
-	c.JSON(http.StatusCreated, faqInput)
+	c.JSON(http.StatusOK, result)
 }
 
-func retrieveValidUpdateInput(c *gin.Context) (*FaqUpdateInput, api_errors.ApiError) {
+func retrieveValidUpdateInput(c *gin.Context) (*FaqUpdateInput, apiErrors.ApiError) {
 	var input FaqUpdateInput
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		return nil, api_errors.NewBadRequestError("invalid json data")
+		return nil, apiErrors.NewBadRequestError("invalid json data")
 	}
 	// todo add validation of parameters
 	id, err := retrieveValidParameterID(c)
