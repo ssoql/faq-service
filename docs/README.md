@@ -11,7 +11,7 @@ This project implements [clean architecture](https://blog.cleancoder.com/uncle-b
 
 #### Middleware
 
-In order to reuse common code such as logging and response mapping this project utilizes also middleware
+In order to reuse common code such as authorization and graceful shutdown this project utilizes also middleware
 pattern. Handlers are wrapped in pipelines where each step wraps and calls the next one.
 
 ## API usage:

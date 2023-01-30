@@ -3,12 +3,16 @@ package useCases
 import (
 	"context"
 	"errors"
+	"os"
+	"testing"
+	"time"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"testing"
 
 	"github.com/ssoql/faq-service/internal/app/entities"
+	"github.com/ssoql/faq-service/internal/global"
 	"github.com/ssoql/faq-service/internal/useCases/repositories"
 	"github.com/ssoql/faq-service/internal/useCases/repositories/mocks"
 	"github.com/ssoql/faq-service/utils/apiErrors"
@@ -38,18 +42,37 @@ func (actualTest *saveFaqTest) createRepositoryFailureMock(t *testing.T) reposit
 	return r
 }
 
+func (actualTest *saveFaqTest) createRepositoryShutdownMock(t *testing.T) repositories.FaqWriteRepository {
+	r := mocks.NewFaqWriteRepository(t)
+	r.On("Insert", mock.Anything, mock.Anything, mock.Anything).Return(
+		func(ctx context.Context, faq *entities.Faq) apiErrors.ApiError {
+			// wait for shutdown signal
+			time.Sleep(200 * time.Millisecond)
+
+			return apiErrors.NewInternalServerError(
+				"error when tying to save faq",
+				ctx.Err(),
+			)
+		},
+	)
+
+	return r
+}
+
 func Test_saveFaqUseCase_Handle(t *testing.T) {
 
 	type args struct {
-		ctx      context.Context
-		question string
-		answer   string
+		ctx        context.Context
+		question   string
+		answer     string
+		isShutdown bool
 	}
 
 	params := args{
-		ctx:      context.Background(),
-		question: "?",
-		answer:   "!",
+		ctx:        context.Background(),
+		question:   "?",
+		answer:     "!",
+		isShutdown: false,
 	}
 
 	actualTest := saveFaqTest{}
@@ -86,14 +109,45 @@ func Test_saveFaqUseCase_Handle(t *testing.T) {
 				require.ErrorContains(t, err, "database error")
 			},
 		},
+		{
+			name:       "graceful-shutdown",
+			repository: actualTest.createRepositoryShutdownMock,
+			args: func() args {
+				params.isShutdown = true
+				return params
+			}(),
+			wantResult: &entities.Faq{},
+			assertResult: func(t *testing.T, err error, getResult, wantResult *entities.Faq) {
+				require.ErrorContains(t, err, "context canceled")
+			},
+		},
 	}
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
+			shutdownChan := make(chan os.Signal)
+
+			defer close(shutdownChan)
+
+			ctx := context.TODO()
+			if tt.args.ctx != nil {
+				ctx = tt.args.ctx
+			}
+
+			ctx = context.WithValue(ctx, global.ShutdownSignal, shutdownChan)
+			// send signal to call graceful shutdown
+			if tt.args.isShutdown {
+				go func() {
+					time.Sleep(20 * time.Millisecond)
+					shutdownChan <- testShutdownSig{}
+				}()
+			}
+
 			u := &saveFaqUseCase{
 				db: tt.repository(t),
 			}
-			result, err := u.Handle(tt.args.ctx, tt.args.question, tt.args.answer)
+
+			result, err := u.Handle(ctx, tt.args.question, tt.args.answer)
 
 			tt.assertResult(t, err, result, tt.wantResult)
 		})

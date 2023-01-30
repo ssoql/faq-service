@@ -4,4 +4,6 @@ const (
 	ParameterFaqID    = "faq_id"
 	ParameterPage     = "page"
 	ParameterPageSize = "page_size"
+
+	ShutdownSignal = "shutdownSignal"
 )

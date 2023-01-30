@@ -3,6 +3,8 @@ package useCases
 import (
 	"context"
 	"github.com/ssoql/faq-service/internal/app/entities"
+	"github.com/ssoql/faq-service/internal/global"
+	"os"
 
 	"github.com/ssoql/faq-service/internal/useCases/repositories"
 	"github.com/ssoql/faq-service/utils/apiErrors"
@@ -26,9 +28,24 @@ func (u *saveFaqUseCase) Handle(ctx context.Context, question, answer string) (*
 		Answer:   answer,
 	}
 
-	if err := u.db.Insert(ctx, newFaq); err != nil {
+	shutdownCtx := u.handleShutdown(ctx)
+
+	if err := u.db.Insert(shutdownCtx, newFaq); err != nil {
 		return nil, err
 	}
 
 	return newFaq, nil
+}
+
+// handleShutdown returns context that will be cancelled if shutdown will occur
+func (u *saveFaqUseCase) handleShutdown(ctx context.Context) context.Context {
+	shutdownChan := ctx.Value(global.ShutdownSignal).(chan os.Signal)
+	shutdownCtx, cancel := context.WithCancel(ctx)
+
+	go func(cancel context.CancelFunc) {
+		<-shutdownChan
+		cancel()
+	}(cancel)
+
+	return shutdownCtx
 }
