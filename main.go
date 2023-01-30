@@ -15,6 +15,7 @@ func main() {
 
 	router := createRouter()
 
+	api.AddHttpMiddleware(router)
 	api.RegisterRoutes(router, dbClient)
 
 	if err := router.Run(config.GetPort()); err != nil {
