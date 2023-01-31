@@ -21,5 +21,7 @@ func NewGetFaqsUseCase(readRepository repositories.FaqReadRepository) *getFaqsUs
 }
 
 func (u *getFaqsUseCase) Handle(ctx context.Context, pageNumber, pageSize int) (*entities.Faqs, apiErrors.ApiError) {
-	return u.db.GetAll(ctx, pageNumber, pageSize)
+	shutdownCtx := handleShutdown(ctx)
+
+	return u.db.GetAll(shutdownCtx, pageNumber, pageSize)
 }

@@ -3,25 +3,27 @@ package useCases
 import (
 	"context"
 	"errors"
+	"testing"
+
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+
 	"github.com/ssoql/faq-service/internal/app/entities"
 	"github.com/ssoql/faq-service/internal/useCases/repositories"
 	"github.com/ssoql/faq-service/internal/useCases/repositories/mocks"
 	"github.com/ssoql/faq-service/utils/apiErrors"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 type getFaqsTest struct{}
 
-func (actualTest *getFaqsTest) createRepositorySuccessMock(t *testing.T) repositories.FaqReadRepository {
+func (getFaqsTest) createRepositorySuccessMock(t *testing.T) repositories.FaqReadRepository {
 	r := mocks.NewFaqReadRepository(t)
 	r.On("GetAll", mock.Anything, mock.Anything, mock.Anything).Return(&entities.Faqs{{Id: 1}}, error(nil))
 
 	return r
 }
 
-func (actualTest *getFaqsTest) createRepositoryFailureMock(t *testing.T) repositories.FaqReadRepository {
+func (getFaqsTest) createRepositoryFailureMock(t *testing.T) repositories.FaqReadRepository {
 	r := mocks.NewFaqReadRepository(t)
 	r.On("GetAll", mock.Anything, mock.Anything, mock.Anything).Return(
 		&entities.Faqs{},

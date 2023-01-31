@@ -25,20 +25,6 @@ POST /faq
     }
 ```
 
-**Create multiple FAQ objects at once:**
-```text
-POST /faqs
-    [
-        {
-            "question":"What is your name?",
-            "answer": "My name is Bot. Chat Bot :)"
-        },
-        {
-            "question":"What is your favourite color?",
-            "answer": "My favourite color is blue"
-        }
-    ]
-```
 **Update FAQ object by ID:**
 ```text
 PATCH /faq/:id

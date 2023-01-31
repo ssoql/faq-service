@@ -2,7 +2,6 @@ package useCases
 
 import (
 	"context"
-
 	"github.com/ssoql/faq-service/internal/app/entities"
 	"github.com/ssoql/faq-service/internal/useCases/repositories"
 	"github.com/ssoql/faq-service/utils/apiErrors"
@@ -25,7 +24,9 @@ func NewUpdateFaqUseCase(writeRepository repositories.FaqWriteRepository, readRe
 }
 
 func (u *updateFaqUseCase) Handle(ctx context.Context, faqID int64, question, answer string) (*entities.Faq, apiErrors.ApiError) {
-	exist, err := u.dbRead.Exists(ctx, faqID)
+	shutdownCtx := handleShutdown(ctx)
+
+	exist, err := u.dbRead.Exists(shutdownCtx, faqID)
 	if err != nil {
 		return &entities.Faq{}, err
 	}
@@ -36,7 +37,7 @@ func (u *updateFaqUseCase) Handle(ctx context.Context, faqID int64, question, an
 
 	faq := &entities.Faq{Id: faqID, Question: question, Answer: answer}
 
-	if err := u.dbWrite.Update(ctx, faq); err != nil {
+	if err := u.dbWrite.Update(shutdownCtx, faq); err != nil {
 		return nil, err
 	}
 

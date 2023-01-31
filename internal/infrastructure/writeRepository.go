@@ -43,7 +43,7 @@ func (r *faqWriteRepository) Update(ctx context.Context, faq *entities.Faq) apiE
 		if strings.Contains(strings.ToLower(err.Error()), "duplicate") {
 			return apiErrors.NewBadRequestError("this question already exists")
 		}
-		return apiErrors.NewInternalServerError("error when tying to save faq", errors.New("database error"))
+		return apiErrors.NewInternalServerError("error when tying to update faq", errors.New("database error"))
 	}
 
 	return nil

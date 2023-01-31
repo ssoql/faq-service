@@ -3,6 +3,7 @@ package useCases
 import (
 	"context"
 	"errors"
+	"github.com/ssoql/faq-service/internal/global"
 	"os"
 	"testing"
 	"time"
@@ -12,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ssoql/faq-service/internal/app/entities"
-	"github.com/ssoql/faq-service/internal/global"
 	"github.com/ssoql/faq-service/internal/useCases/repositories"
 	"github.com/ssoql/faq-service/internal/useCases/repositories/mocks"
 	"github.com/ssoql/faq-service/utils/apiErrors"
@@ -84,6 +84,7 @@ func Test_saveFaqUseCase_Handle(t *testing.T) {
 		wantResult   *entities.Faq
 		assertResult func(t *testing.T, err error, getResult, wantResult *entities.Faq)
 	}{
+
 		{
 			name:       "success",
 			repository: actualTest.createRepositorySuccessMock,
@@ -101,16 +102,7 @@ func Test_saveFaqUseCase_Handle(t *testing.T) {
 			},
 		},
 		{
-			name:       "failure",
-			repository: actualTest.createRepositoryFailureMock,
-			args:       params,
-			wantResult: &entities.Faq{},
-			assertResult: func(t *testing.T, err error, getResult, wantResult *entities.Faq) {
-				require.ErrorContains(t, err, "database error")
-			},
-		},
-		{
-			name:       "graceful-shutdown",
+			name:       "context-canceled",
 			repository: actualTest.createRepositoryShutdownMock,
 			args: func() args {
 				params.isShutdown = true
@@ -121,23 +113,33 @@ func Test_saveFaqUseCase_Handle(t *testing.T) {
 				require.ErrorContains(t, err, "context canceled")
 			},
 		},
+		{
+			name:       "failure",
+			repository: actualTest.createRepositoryFailureMock,
+			args:       params,
+			wantResult: &entities.Faq{},
+			assertResult: func(t *testing.T, err error, getResult, wantResult *entities.Faq) {
+				require.ErrorContains(t, err, "database error")
+			},
+		},
 	}
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			shutdownChan := make(chan os.Signal)
-
-			defer close(shutdownChan)
 
 			ctx := context.TODO()
 			if tt.args.ctx != nil {
 				ctx = tt.args.ctx
 			}
 
-			ctx = context.WithValue(ctx, global.ShutdownSignal, shutdownChan)
 			// send signal to call graceful shutdown
 			if tt.args.isShutdown {
+				shutdownChan := make(chan os.Signal)
+				ctx = context.WithValue(ctx, global.ShutdownSignal, shutdownChan)
+
 				go func() {
+					defer close(shutdownChan)
+
 					time.Sleep(20 * time.Millisecond)
 					shutdownChan <- testShutdownSig{}
 				}()

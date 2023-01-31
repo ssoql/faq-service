@@ -37,6 +37,23 @@ func (actualTest *updateFaqTest) createWriteRepositoryFailureMock(t *testing.T) 
 	return r
 }
 
+func (actualTest *updateFaqTest) createWriteRepositoryShutdownMock(t *testing.T) repositories.FaqWriteRepository {
+	r := mocks.NewFaqWriteRepository(t)
+	r.On("Update", mock.Anything, mock.Anything).Return(
+		func(ctx context.Context, faq *entities.Faq) apiErrors.ApiError {
+			// wait for shutdown signal
+			time.Sleep(800 * time.Millisecond)
+
+			return apiErrors.NewInternalServerError(
+				"error when tying to save faq",
+				ctx.Err(),
+			)
+		},
+	)
+
+	return r
+}
+
 func (actualTest *updateFaqTest) createReadRepositorySuccessMock(t *testing.T) repositories.FaqReadRepository {
 	r := mocks.NewFaqReadRepository(t)
 	r.On("Exists", mock.Anything, mock.Anything).Return(true, error(nil))
@@ -119,6 +136,19 @@ func Test_updateFaqUseCase_Handle(t *testing.T) {
 			},
 		},
 		{
+			name:            "context-canceled",
+			readRepository:  actualTest.createReadRepositorySuccessMock,
+			writeRepository: actualTest.createWriteRepositoryShutdownMock,
+			args: func() args {
+				params.isShutdown = true
+				return params
+			}(),
+			wantResult: &entities.Faq{},
+			assertResult: func(t *testing.T, err error, getResult, wantResult *entities.Faq) {
+				require.ErrorContains(t, err, "context canceled")
+			},
+		},
+		{
 			name:           "check-if-exists-failure",
 			readRepository: actualTest.createReadRepositoryFailureMock,
 			writeRepository: func(t *testing.T) repositories.FaqWriteRepository {
@@ -145,19 +175,19 @@ func Test_updateFaqUseCase_Handle(t *testing.T) {
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			shutdownChan := make(chan os.Signal)
-
-			defer close(shutdownChan)
-
 			ctx := context.TODO()
 			if tt.args.ctx != nil {
 				ctx = tt.args.ctx
 			}
 
-			ctx = context.WithValue(ctx, global.ShutdownSignal, shutdownChan)
 			// send signal to call graceful shutdown
 			if tt.args.isShutdown {
+				shutdownChan := make(chan os.Signal)
+				ctx = context.WithValue(ctx, global.ShutdownSignal, shutdownChan)
+
 				go func() {
+					defer close(shutdownChan)
+
 					time.Sleep(20 * time.Millisecond)
 					shutdownChan <- testShutdownSig{}
 				}()
